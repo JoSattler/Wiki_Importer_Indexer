@@ -1,0 +1,69 @@
+package de.htw.ai.Wiki_Importer
+
+import org.junit.runner.RunWith
+import org.scalatest.FunSuite
+import org.scalatest.junit.JUnitRunner
+import org.scalatest.BeforeAndAfterAll
+import org.apache.spark.SparkConf
+import org.apache.spark.SparkContext
+import com.datastax.spark.connector._
+
+@RunWith(classOf[JUnitRunner])
+class BenchmarkTest_Cassandra extends FunSuite with BeforeAndAfterAll{
+
+
+   var sc: SparkContext = _
+   var sparkConf: SparkConf = _
+   var cassandrahost = "<Host>"
+   var cassandraport = "<Port>"
+   var cassandrausername = "<Username>"
+   var cassandrapw = "<Password>"
+   var cassandrawikitab = "<Wikitable_Name>"
+   var cassandrainvIndextab = "<Iverse Indezies Table Name>"
+   var cassandrakeyspace = "<Keyspace Name>"
+  
+   override protected def beforeAll() { 
+      sparkConf = new SparkConf(true).setAppName("Tester").setMaster("local[2]")
+      .set("spark.cassandra.connection.host", s"${cassandrahost}")
+      .set("spark.cassandra.connection.port", s"${cassandraport}")
+      .set("spark.cassandra.auth.username", s"${cassandrausername}")
+      .set("spark.cassandra.auth.password", s"${cassandrapw}")
+    sc = new SparkContext(sparkConf)
+   }
+
+  
+  test("findexacttitle_Cassandra") {
+    val df = sc.cassandraTable(cassandrakeyspace, cassandrawikitab)
+    val article = df.filter(doc => doc.getString(1) == "Anime")
+    assert(article.count() == 1)
+    assert(article.first().getString(1) == "Anime")
+  }
+  
+  test("findtitle_Contains") {
+    val df = sc.cassandraTable(cassandrakeyspace, cassandrawikitab)
+    val articles = df.filter(doc => doc.getString(1).contains("Anime"))   
+    assert(articles.first().getString(1).contains("Anime") == true)  
+  }
+
+    test("finddocwords_cassandra") {
+    val df = sc.cassandraTable(cassandrakeyspace, cassandrainvIndextab)
+    val articles = df.filter(doc => doc.getLong(1)== 1)
+    assert(articles.count() == 282)
+    assert(articles.first().getString(0) == "aran")
+    
+  }
+  
+   test("findworddocs_cassandra") {
+    val df = sc.cassandraTable(cassandrakeyspace, cassandrainvIndextab)
+    val articles = df.filter(doc => doc.getString(0) == "anime")
+    assert(articles.first().getString(0) == "anime")
+    
+  }  
+  
+  override protected def afterAll() {
+
+     if (sc!=null) {sc.stop; println("Spark stopped......")}
+     else println("Cannot stop spark - reference lost!!!!")
+   }
+  
+}
