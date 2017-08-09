@@ -39,7 +39,7 @@ class BenchmarkTest_Cassandra extends FunSuite with BeforeAndAfterAll{
     assert(article.first().getString(1) == "Anime")
   }
   
-  test("findtitle_Contains") {
+  test("finddocID_Cassandra") {
     val df = sc.cassandraTable(cassandrakeyspace, cassandrawikitab)
     val articles = df.select("docid","title", "wikitext").where("docID = ?", "1")   
     assert(articles.first().getLong(0) == 1)  
