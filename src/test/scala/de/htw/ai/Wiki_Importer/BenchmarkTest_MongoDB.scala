@@ -40,15 +40,15 @@ class BenchmarkTest_MongoDB extends FunSuite with BeforeAndAfterAll{
   
        test("findexacttitle_MongoDB") {
     val df = sc.loadFromMongoDB(rconfic1)
-    val article = df.filter(doc => doc.getString(1) == "Anime")
+    val article = df.select("*").filter(df("title").equalTo("Anime"))
     assert(article.count() == 1)
     assert(article.first().getString(1) == "Anime")
   }
 
-     test("findtitle_Contains_MongoDB") {
+     test("finddocID_MongoDB") {
     val df = sc.loadFromMongoDB(rconfic1)
-    val articles = df.filter(doc => doc.getString(1).contains("Anime"))   
-    assert(articles.first().getString(1).contains("Anime") == true)  
+    val articles = df.select("*").filter(df("_id").equalTo(1))   
+    assert(articles.first().getLong(0) == 1)  
   }
 
     test("finddocwords_MongoDB") {
@@ -63,7 +63,7 @@ class BenchmarkTest_MongoDB extends FunSuite with BeforeAndAfterAll{
   
    test("findworddocs_MySQL") {
     val df = sc.loadFromMongoDB(rconfic2)
-    val articles = df.filter(doc => doc.getString(0) == "anime")
+    val articles = df.select("*").filter(df("title").equalTo("anime"))
     assert(articles.first().getString(0) == "anime")
     
   }  
