@@ -38,6 +38,7 @@ object Benchmarktest {
    *  @param titleSetfile name of the file for title search Benchmarks
    *  @param docIDSetFile name of the file for docID search Benchmarks
    *  @param wordIDSetFile name of the file for word search Benchmarks
+   *  @param docIDWikiSet File name of the file for docID search Benchmarks
    *  
    */
   def loadResources(titleSetFile: String = "titleset.txt", docIDSetFile: String = "docIDSet.txt", wordSetFile: String = "wordSet.txt", docIDWikiSetFile: String = "docIDWikiSet.txt") = {
@@ -74,7 +75,7 @@ object Benchmarktest {
    *  
    *  Queries: 
    *  1. Find the document in the "wikiarticles" collection with the exact given title.
-   *  2. Find all documents in the "wikiarticles" whose title contains the given String
+   *  2. Find the documents in the "wikiarticles" collection with the given docID
    *  3. Find all words of a given document (docID) in the "inverseIndezes" collection
    *  4. Find all documents containing the given word in the "inverseIndezes" collection
    */
@@ -132,7 +133,7 @@ object Benchmarktest {
    *  
    *  Queries: 
    *  1. Find the document in the "wikiarticles" Table with the exact given title.
-   *  2. Find all documents in the "wikiarticles" Table whose title contains the given String
+   *  2. Find all document in the "wikiarticles" Table for the given docID
    *  3. Find all words of a given document ("docID") in the "inverseIndezes" Table
    *  4. Find all documents containing the given word in the "inverseIndezes" Table
    */
@@ -195,7 +196,7 @@ object Benchmarktest {
    *  
    *  Queries: 
    *  1. Find the document in the "wikiarticles" Collumn Family with the exact given title.
-   *  2. Find all documents in the "wikiarticles" whose title contains the given String
+   *  2. Find all document in the "wikiarticles" for the given docID
    *  3. Find all words of a given document ("docID") in the "inverseIndezes" Column Family
    *  4. Find all documents containing the given word in the "inverseIndezes" Column Family
    */
