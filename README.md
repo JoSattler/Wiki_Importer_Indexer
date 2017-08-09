@@ -94,3 +94,7 @@ inverse index Table:
 		  PRIMARY KEY(word, docid)
 		  );
 ```
+
+### MongoDB
+
+No Collection Setup needed
