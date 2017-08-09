@@ -57,7 +57,7 @@ class BenchmarkTest_MySQLTest extends FunSuite with BeforeAndAfterAll {
   }
 
     test("finddocwords_MySQL") {
-    val df = sqlContext.read.jdbc(mySQLClient, mySQLInvIndexTable, prop).select("*").where(s"docID = 1")
+    val df = sqlContext.read.jdbc(mySQLClient, mySQLInvIndexTable, prop).select("*").where("docID = 1")
     val articles = df
     assert(articles.count() == 405)
     assert(articles.first().getString(0) == "alan")
@@ -65,7 +65,7 @@ class BenchmarkTest_MySQLTest extends FunSuite with BeforeAndAfterAll {
   }
   
    test("findworddocs_MySQL") {
-    val df = sqlContext.read.jdbc(mySQLClient, mySQLInvIndexTable, prop).select("*").where(s"word = 'anime'")
+    val df = sqlContext.read.jdbc(mySQLClient, mySQLInvIndexTable, prop).select("*").where("word = 'anime'")
     val articles = df
     assert(articles.first().getString(0) == "anime")
     
