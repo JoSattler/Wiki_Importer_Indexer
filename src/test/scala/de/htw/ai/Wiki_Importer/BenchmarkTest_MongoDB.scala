@@ -63,7 +63,7 @@ class BenchmarkTest_MongoDB extends FunSuite with BeforeAndAfterAll{
   
    test("findworddocs_MySQL") {
     val df = sc.loadFromMongoDB(rconfic2)
-    val articles = df.select("*").filter(df("title").equalTo("anime"))
+    val articles = df.select("*").filter(df("word").equalTo("anime"))
     assert(articles.first().getString(0) == "anime")
     
   }  
