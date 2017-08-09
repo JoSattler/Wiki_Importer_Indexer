@@ -34,20 +34,20 @@ class BenchmarkTest_Cassandra extends FunSuite with BeforeAndAfterAll{
   
   test("findexacttitle_Cassandra") {
     val df = sc.cassandraTable(cassandrakeyspace, cassandrawikitab)
-    val article = df.filter(doc => doc.getString(1) == "Anime")
+    val article = df.select("docid","title", "wikitext").where("title = ?", "Anime") 
     assert(article.count() == 1)
     assert(article.first().getString(1) == "Anime")
   }
   
   test("findtitle_Contains") {
     val df = sc.cassandraTable(cassandrakeyspace, cassandrawikitab)
-    val articles = df.filter(doc => doc.getString(1).contains("Anime"))   
-    assert(articles.first().getString(1).contains("Anime") == true)  
+    val articles = df.select("docid","title", "wikitext").where("docID = ?", "1")   
+    assert(articles.first().getLong(0) == 1)  
   }
 
     test("finddocwords_cassandra") {
     val df = sc.cassandraTable(cassandrakeyspace, cassandrainvIndextab)
-    val articles = df.filter(doc => doc.getLong(1)== 1)
+    val articles = df.select("word","docid", "occurences").where("docid = ?", "1")
     assert(articles.count() == 282)
     assert(articles.first().getString(0) == "aran")
     
@@ -55,7 +55,7 @@ class BenchmarkTest_Cassandra extends FunSuite with BeforeAndAfterAll{
   
    test("findworddocs_cassandra") {
     val df = sc.cassandraTable(cassandrakeyspace, cassandrainvIndextab)
-    val articles = df.filter(doc => doc.getString(0) == "anime")
+    val articles = df.select("word","docid", "occurences").where("word = ?", "anime")
     assert(articles.first().getString(0) == "anime")
     
   }  
