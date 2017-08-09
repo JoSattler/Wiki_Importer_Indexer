@@ -41,7 +41,7 @@ class BenchmarkTest_Cassandra extends FunSuite with BeforeAndAfterAll{
   
   test("finddocID_Cassandra") {
     val df = sc.cassandraTable(cassandrakeyspace, cassandrawikitab)
-    val articles = df.select("docid","title", "wikitext").where("docID = ?", "1")   
+    val articles = df.select("docid","title", "wikitext").where("docid = ?", "1")   
     assert(articles.first().getLong(0) == 1)  
   }
 
