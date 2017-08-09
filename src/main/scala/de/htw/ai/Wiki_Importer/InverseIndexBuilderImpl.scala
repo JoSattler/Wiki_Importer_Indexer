@@ -3,12 +3,11 @@ package de.htw.ai.Wiki_Importer
 import java.util.Locale
 import scala.annotation.tailrec
 
-
 /**
  * Created by chris on 06.11.2016.
  * Modified by Jörn Sattler on 25.07.2017
  * Source: https://github.com/WikiPlag/wiki_data_fetcher
- * 
+ *
  */
 object InverseIndexBuilderImpl {
 
@@ -60,12 +59,12 @@ object InverseIndexBuilderImpl {
    * @param doc_id The document's identifier.
    * @param tokens The parsed and normalized words of the document.
    * @return The inverse index for the passed document
-   * 
+   *
    * Change by JörnSattler: Stopwords where filtered at a different method and thereby were producing wrong results
    */
   def buildInverseIndexEntry(doc_id: Long,
                              tokens: List[String]): Map[String, (Long, List[Int])] = {
-    if (stopWords == null){ loadStopWords()}
+    if (stopWords == null) { loadStopWords() }
 
     tokens.foldLeft((Map.empty[String, (Long, List[Int])], 0)) {
       (entry, x) =>
@@ -73,7 +72,7 @@ object InverseIndexBuilderImpl {
           val docList = entry._1.getOrElse(x, (doc_id, List.empty[Int]))._2
           (entry._1.updated(x, (doc_id, docList :+ entry._2)), entry._2 + 1)
         }
-      //addedbyme stopwörter an dieseer stelle entfernen
+      //Edit: Remove Stopwords here to produce keys matching to the actual wikitext.
     }._1.filterKeys(x => !stopWords.contains(x))
 
   }
@@ -112,21 +111,15 @@ object InverseIndexBuilderImpl {
    * compound token keys. (currently n = 1, meaning compound tokens are disabled)
    * </p>
    *
-   * Change by Jörn: Changed function to retreive tokens without wikimarkup language instread of only words. 
-   * Change by Jörn:  Removing stopwords here produces incorrect tokens which don't match with the text. 
+   * Change by Jörn: Changed function to retreive tokens without wikimarkup language instread of only words.
+   * Change by Jörn:  Removing stopwords here produces incorrect tokens which don't match with the text.
    *
    * @param documentText the input text that should be parsed.
    * @return a collection of tokens already prepared to build an inverse index.
    */
   def buildIndexKeys(documentText: String): List[String] = {
-  //  var tokens = WikiDumpParser.extractPlainText(documentText)
     var tokens = WikiDumpParser.extractWikiDisplayText(documentText)
-    tokens = normalize(tokens)
-
-    //if (stopWords == null) loadStopWords()
-    // tokens = tokens.filter(x => !stopWords.contains(x))
-
-    buildSingleTokenKeys(tokens)
+    normalize(tokens)
   }
 
   /**
@@ -163,7 +156,7 @@ object InverseIndexBuilderImpl {
      * see: https://www.elastic.co/guide/en/elasticsearch/guide/current/inverted-index.html
      */
   }
-
+  //Why is that even here?
   private def buildSingleTokenKeys(uniqueTokens: List[String]): List[String] = uniqueTokens
 
   @tailrec
