@@ -42,30 +42,31 @@ class BenchmarkTest_MySQLTest extends FunSuite with BeforeAndAfterAll {
    
    
    
+   
      test("findexacttitle_MySQL") {
-    val df = sqlContext.read.jdbc(mySQLClient, mySQLWikiTable, prop)
-    val article = df.filter(doc => doc.getString(1) == "Anime")
+    val df = sqlContext.read.jdbc(mySQLClient, mySQLWikiTable, prop).select("*").where("title = 'Anime'")
+    val article = df
     assert(article.count() == 1)
     assert(article.first().getString(1) == "Anime")
   }
 
-     test("findtitle_Contains_MySQl") {
+     test("finddocID_MySQl") {
     val df = sqlContext.read.jdbc(mySQLClient, mySQLWikiTable, prop)
-    val articles = df.filter(doc => doc.getString(1).contains("Anime"))   
-    assert(articles.first().getString(1).contains("Anime") == true)  
+    val articles = df.select("*").where(s"docID = 1")  
+    assert(articles.first().getLong(0) == 1)  
   }
 
     test("finddocwords_MySQL") {
-    val df = sqlContext.read.jdbc(mySQLClient, mySQLInvIndexTable, prop)
-    val articles = df.filter(doc => doc.getLong(1)== 1)
+    val df = sqlContext.read.jdbc(mySQLClient, mySQLInvIndexTable, prop).select("*").where(s"docID = 1")
+    val articles = df
     assert(articles.count() == 405)
     assert(articles.first().getString(0) == "alan")
     
   }
   
    test("findworddocs_MySQL") {
-    val df = sqlContext.read.jdbc(mySQLClient, mySQLInvIndexTable, prop)
-    val articles = df.filter(doc => doc.getString(0) == "anime")
+    val df = sqlContext.read.jdbc(mySQLClient, mySQLInvIndexTable, prop).select("*").where(s"word = 'anime'")
+    val articles = df
     assert(articles.first().getString(0) == "anime")
     
   }  
