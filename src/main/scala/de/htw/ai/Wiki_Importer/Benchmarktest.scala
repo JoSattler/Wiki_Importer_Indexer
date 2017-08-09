@@ -12,7 +12,6 @@ import scala.collection.mutable.ListBuffer
 import com.mongodb.spark.config._
 import com.mongodb.spark.sql._
 
-
 /*
  * Created by Jörn Sattler on
  * 25.07.2017
@@ -24,10 +23,11 @@ object Benchmarktest {
 
   var titleSet: Set[String] = _
   var docIDSet: Set[Long] = _
+  var docIDWikiSet: Set[Long] = _
   var wordSet: Set[String] = _
 
   val exactList = new ListBuffer[(String, Double)]()
-  val containsList = new ListBuffer[(String, Double)]()
+  val docIDWikiList = new ListBuffer[(Long, Double)]()
   val docwordList = new ListBuffer[(Long, Double)]()
   val worddocList = new ListBuffer[(String, Double)]()
 
@@ -40,7 +40,7 @@ object Benchmarktest {
    *  @param wordIDSetFile name of the file for word search Benchmarks
    *  
    */
-  def loadResources(titleSetFile: String = "titleset.txt", docIDSetFile: String = "docIDSet.txt", wordSetFile: String = "wordSet.txt") = {
+  def loadResources(titleSetFile: String = "titleset.txt", docIDSetFile: String = "docIDSet.txt", wordSetFile: String = "wordSet.txt", docIDWikiSetFile: String = "docIDWikiSet.txt") = {
     titleSet = Option(getClass.getClassLoader().getResourceAsStream(titleSetFile))
       .map(scala.io.Source.fromInputStream)
       .map(_.getLines.toSet)
@@ -49,13 +49,16 @@ object Benchmarktest {
       .map(scala.io.Source.fromInputStream)
       .map(_.getLines().toSet)
       .getOrElse(scala.io.Source.fromFile(docIDSetFile).getLines.toSet).map(_.toLong)
+    docIDWikiSet = Option(getClass.getClassLoader().getResourceAsStream(docIDWikiSetFile))
+      .map(scala.io.Source.fromInputStream)
+      .map(_.getLines().toSet)
+      .getOrElse(scala.io.Source.fromFile(docIDWikiSetFile).getLines.toSet).map(_.toLong)
 
     wordSet = Option(getClass.getClassLoader().getResourceAsStream(wordSetFile))
       .map(scala.io.Source.fromInputStream)
       .map(_.getLines.toSet)
       .getOrElse(scala.io.Source.fromFile(wordSetFile).getLines.toSet)
   }
-
 
   /*
    * Tests a given mongoDB and its "wikiarticle" and "inverseIndezes" collections for querytime of specified queries. 
@@ -81,12 +84,12 @@ object Benchmarktest {
       .getOrCreate()
     val rconfig1 = ReadConfig(Map("uri" -> s"${mongoClient}.${mongoDBWikiCollection}"))
     val rconfig2 = ReadConfig(Map("uri" -> s"${mongoClient}.${mongoDBIndexCollection}"))
-    if (titleSet == null || docIDSet == null || wordSet == null) { loadResources() }
+    if (titleSet == null || docIDSet == null || wordSet == null || docIDWikiSet == null) { loadResources() }
 
     titleSet.foreach(f =>
-      (exactList += testWikiMongoFindTitleexact(sc, rconfig1, f),
-        containsList += testWikiMongoFindTitle(sc, rconfig1, f)))
-
+      exactList += testWikiMongoFindTitleexact(sc, rconfig1, f))
+    docIDWikiSet.foreach(f =>
+      docIDWikiList += testWikiMongoFinddocID(sc, rconfig1, f))
     docIDSet.foreach(f =>
       docwordList += testIndexMongofindDocWords(sc, rconfig2, f))
 
@@ -100,15 +103,15 @@ object Benchmarktest {
     println("----------------------------------------------------------")
     exactList.toList.foreach(println)
     println("----------------------------------------------------------")
-    println("TEST EXACT TITLE MATCHES MongoDB")
+    println("TEST DOCID  MATCHES MongoDB")
     println("----------------------------------------------------------")
-    containsList.toList.foreach(println)
+    docIDWikiList.toList.foreach(println)
     println("----------------------------------------------------------")
-    println("TEST EXACT TITLE MATCHES MongoDB")
+    println("TEST WORD FOR DOC MATCHES MongoDB")
     println("----------------------------------------------------------")
     docwordList.toList.foreach(println)
     println("----------------------------------------------------------")
-    println("TEST EXACT TITLE MATCHES MongoDB")
+    println("TEST GET ALL DOCS WITH WORD MongoDB")
     println("----------------------------------------------------------")
     worddocList.toList.foreach(println)
 
@@ -138,7 +141,7 @@ object Benchmarktest {
     val conf = new SparkConf().setAppName("Database_Benchmark_MySQL")
     val sc = new SparkContext(conf)
     val sqlContext = new SQLContext(sc)
-    if (titleSet == null || docIDSet == null || wordSet == null) { loadResources() }
+    if (titleSet == null || docIDSet == null || wordSet == null || docIDWikiSet == null) { loadResources() }
     //create Properties to be able to read/write to/from the MySQL Database
     val prop = new java.util.Properties
     prop.setProperty("driver", "com.mysql.jdbc.Driver")
@@ -146,11 +149,13 @@ object Benchmarktest {
     prop.setProperty("password", mySQLDBPW)
 
     titleSet.foreach(f =>
-      (exactList += testWikiMySQLFindTitleexact(sqlContext, mySQLClient, mySQLWikiTable, prop, f),
-        containsList += testWikiMySQLFindTitle(sqlContext, mySQLClient, mySQLWikiTable, prop, f)))
+      exactList += testWikiMySQLFindTitleexact(sqlContext, mySQLClient, mySQLWikiTable, prop, f))
+
+    docIDWikiSet.foreach(f =>
+      docIDWikiList += testWikiMySQLFinddocID(sqlContext, mySQLClient, mySQLWikiTable, prop, f))
 
     docIDSet.foreach(f =>
-      docwordList += testIndexMySQLfindDocWords(sqlContext, mySQLClient, mySQLInvIndexTable, prop, f))
+     docwordList += testIndexMySQLfindDocWords(sqlContext, mySQLClient, mySQLInvIndexTable, prop, f))
 
     wordSet.foreach(f =>
       worddocList += testIndexMySQLfindDocWordDoc(sqlContext, mySQLClient, mySQLInvIndexTable, prop, f))
@@ -162,9 +167,9 @@ object Benchmarktest {
     println("----------------------------------------------------------")
     exactList.toList.foreach(println)
     println("----------------------------------------------------------")
-    println("TEST TITLE CONTAINS MATCHES MySQL")
+    println("TEST DOCID MATCHES MySQL")
     println("----------------------------------------------------------")
-    containsList.toList.foreach(println)
+    docIDWikiList.toList.foreach(println)
     println("----------------------------------------------------------")
     println("TEST GET ALL WORDS OF DOCUMENT MySQL")
     println("----------------------------------------------------------")
@@ -201,12 +206,13 @@ object Benchmarktest {
       .set("spark.cassandra.auth.username", cassandraUser)
       .set("spark.cassandra.auth.password", cassandraPW)
 
-    if (titleSet == null || docIDSet == null || wordSet == null) { loadResources() }
+    if (titleSet == null || docIDSet == null || wordSet == null || docIDWikiSet == null) { loadResources() }
 
     val sc = new SparkContext(sparkConf)
 
-    titleSet.foreach(f => (exactList += testWikiCassandraFindTitleexact(sc, cassandraKeyspace, cassandraWikiTables, f),
-      containsList += testWikiCassandraFindTitle(sc, cassandraKeyspace, cassandraWikiTables, f)))
+    titleSet.foreach(f => exactList += testWikiCassandraFindTitleexact(sc, cassandraKeyspace, cassandraWikiTables, f))
+
+    docIDWikiSet.foreach(f => docIDWikiList += testWikiCassandraFinddocID(sc, cassandraKeyspace, cassandraWikiTables, f))
 
     docIDSet.foreach(f => docwordList += testIndexCassandraDocWords(sc, cassandraKeyspace, cassandraInvIndexTables, f))
 
@@ -219,9 +225,9 @@ object Benchmarktest {
     println("----------------------------------------------------------")
     exactList.toList.foreach(println)
     println("----------------------------------------------------------")
-    println("TEST TITLE CONTAINS MATCHES CASSANDRA")
+    println("TEST DOCID MATCHES CASSANDRA")
     println("----------------------------------------------------------")
-    containsList.toList.foreach(println)
+    docIDWikiList.toList.foreach(println)
     println("----------------------------------------------------------")
     println("TEST GET ALL WORDS OF DOCUMENT CASSANDRA")
     println("----------------------------------------------------------")
@@ -233,92 +239,104 @@ object Benchmarktest {
 
     sc.stop
   }
-/*
+  /*
  * Finds document with exact matching title
  */
   def testWikiCassandraFindTitleexact(sc: SparkContext, cassandraKeyspace: String, cassandraWikiTables: String, search: String): (String, Double) = {
     val df = sc.cassandraTable(cassandraKeyspace, cassandraWikiTables)
-    (search, time(df.filter(doc => doc.getString(1) == search)))
+     println("Searching for title: " + search)
+    (search, time(df.select("docid","title", "wikitext").where("title = ?", s"${search}").count()))
   }
   /*
-   * Finds all documents containing the title
+   * Finds the document for the given docID
    */
-  def testWikiCassandraFindTitle(sc: SparkContext, cassandraKeyspace: String, cassandraWikiTables: String, search: String): (String, Double) = {
+  def testWikiCassandraFinddocID(sc: SparkContext, cassandraKeyspace: String, cassandraWikiTables: String, search: Long): (Long, Double) = {
     val df = sc.cassandraTable(cassandraKeyspace, cassandraWikiTables)
-    (search, time(df.filter(doc => doc.getString(1).contains(search))))
+        println("Searching for docID: " + search)
+    (search, time(df.select("docid","title", "wikitext").where("docid = ?", s"${search}").count()))
   }
   /*
    * Finds all words for a given document
    */
   def testIndexCassandraDocWords(sc: SparkContext, cassandraKeyspace: String, cassandraInvIndexTables: String, search: Long): (Long, Double) = {
     val df = sc.cassandraTable(cassandraKeyspace, cassandraInvIndexTables)
-    (search, time(df.filter(doc => doc.getLong(1)== search)))
+     println("Searching for: all words of docID: " + search)
+    (search, time(df.select("word","docid", "occurences").where("docid = ?", s"${search}").count()))
   }
-/*
+  /*
  * Finds all documents containing the term
  */
   def testIndexCassandraDocWordDoc(sc: SparkContext, cassandraKeyspace: String, cassandraInvIndexTables: String, search: String): (String, Double) = {
     val df = sc.cassandraTable(cassandraKeyspace, cassandraInvIndexTables)
-    (search, time(df.filter(doc => doc.getString(0) == search)))
+    println("Searching for all documents with word: " + search)
+    (search, time(df.select("word","docid", "occurences").where("word = ?", s"${search}").count()))
   }
-/*
+  /*
  * Finds document with exact matching title
  */
   def testWikiMongoFindTitleexact(sc: SparkSession, rc: ReadConfig, search: String): (String, Double) = {
+    println("Searching for title: " + search)
     val df = sc.loadFromMongoDB(rc)
-    (search, time(df.filter(x => x.getString(1) == search)))
+    (search, time(df.select("*").filter(df("title").equalTo(search)).count()))
   }
   /*
-   * Finds all documents containing the title
+   * Finds the document for the given docID
    */
-  def testWikiMongoFindTitle(sc: SparkSession, rc: ReadConfig, search: String): (String, Double) = {
+  def testWikiMongoFinddocID(sc: SparkSession, rc: ReadConfig, search: Long): (Long, Double) = {
+    println("Searching for docID: " + search)
     val df = sc.loadFromMongoDB(rc)
-    (search, time(df.filter(doc => doc.getString(1).contains(search))))
+    (search, time(df.select("*").filter(df("_id").equalTo(search)).count()))
   }
   /*
    * Finds words and for a given document
    */
   def testIndexMongofindDocWords(sc: SparkSession, rc: ReadConfig, search: Long): (Long, Double) = {
+    println("Searching for: all words of docID: " + search)
     val df = sc.loadFromMongoDB(rc)
-    (search, time(df.select("*").where(df("invIndex._1")(0).equalTo(search))))
+    (search, time(df.select("*").where(df("invIndex._1")(0).equalTo(search)).count()))
   }
- /*
+  /*
  * Finds all documents containing the term
  */
   def testIndexMongofindDocWordDoc(sc: SparkSession, rc: ReadConfig, search: String): (String, Double) = {
     val df = sc.loadFromMongoDB(rc)
-    (search, time(df.filter(doc => doc.getString(0) == search)))
+    println("Searching for all documents with word: " + search)
+    (search, time(df.select("*").filter(df("_id").equalTo(search)).count()))
   }
-/*
+  /*
  * Finds document with exact matching title
  */
   def testWikiMySQLFindTitleexact(sqlContext: SQLContext, mySQLClient: String, mySQLWikiTable: String, prop: java.util.Properties, search: String): (String, Double) = {
-    val df = sqlContext.read.jdbc(mySQLClient, mySQLWikiTable, prop)
-    (search, time(df.filter(doc => doc.getString(1) == search)))
+    println("Searching for title: " + search)
+    val df = sqlContext.read.jdbc(mySQLClient, mySQLWikiTable, prop).select("*").where(s"title = '${search}'")
+    (search, time(df.count()))
   }
-    /*
-   * Finds all documents containing the title
+  /*
+   * Finds the document for the given docID
    */
-  def testWikiMySQLFindTitle(sqlContext: SQLContext, mySQLClient: String, mySQLWikiTable: String, prop: java.util.Properties, search: String): (String, Double) = {
-    val df = sqlContext.read.jdbc(mySQLClient, mySQLWikiTable, prop)
-    (search, time(df.filter(doc => doc.getString(1).contains(search))))
+  def testWikiMySQLFinddocID(sqlContext: SQLContext, mySQLClient: String, mySQLWikiTable: String, prop: java.util.Properties, search: Long): (Long, Double) = {
+    println("Searching for docID: " + search)
+    val df = sqlContext.read.jdbc(mySQLClient, mySQLWikiTable, prop).select("*").where(s"docID = ${search}")
+    (search, time(df.count()))
   }
   /*
    * Finds words and for a given document
    */
   def testIndexMySQLfindDocWords(sqlContext: SQLContext, mySQLClient: String, mySQLInvIndexTable: String, prop: java.util.Properties, search: Long): (Long, Double) = {
-    val df = sqlContext.read.jdbc(mySQLClient, mySQLInvIndexTable, prop)
-    (search, time(df.filter(doc => doc.getLong(1) == search)))
+    println("Searching for: all words of docID: " + search)  
+    val df = sqlContext.read.jdbc(mySQLClient, mySQLInvIndexTable, prop).select("*").where(s"docID = ${search}")
+    (search, time(df.count()))
   }
-/*
+  /*
  * Finds all documents containing the term
  */
   def testIndexMySQLfindDocWordDoc(sqlContext: SQLContext, mySQLClient: String, mySQLInvIndexTable: String, prop: java.util.Properties, search: String): (String, Double) = {
-    val df = sqlContext.read.jdbc(mySQLClient, mySQLInvIndexTable, prop)
-    (search, time(df.filter(doc => doc.getString(0) == search)))
+    println("Searching for all documents with word: " + search)
+    val df = sqlContext.read.jdbc(mySQLClient, mySQLInvIndexTable, prop).select("*").where(s"word = '${search}'")
+    (search, time(df.count()))
   }
 
- /*
+  /*
   * source: http://biercoff.com/easily-measuring-code-execution-time-in-scala/
   * Used for measuring codeexecution time.
   */
